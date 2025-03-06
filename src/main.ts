@@ -1,22 +1,24 @@
-import Reactor, { useState, createElement } from "./reactor"
+import Reactor, { useState, createElement } from "./reactor";
+import htm from "htm";
 
+const html = htm.bind(Reactor.createElement);
 Reactor.createRoot(document.getElementById("app")!).render(createElement(App));
 
 function App() {
     const [count, setCount] = useState(0);
 
-    return [
-        createElement("p", null, "Count: ", count),
-        createElement("button", { onclick: () => setCount(count + 1) }, "Increment counter"),
-        createElement("hr"),
-        createElement(Container, null,
-            createElement(TodoList)
-        )
-    ];
+    return html`
+        <p>Count: ${count}</p>
+        <button onclick=${() => setCount(count + 1)}>Increment counter</button>
+        <hr />
+        <${Container}>
+            <${TodoList} />
+        <//>
+    `;
 }
 
 function Container({ children }: { children: Reactor.ReactorRenderable }) {
-    return createElement("section", null, children);
+    return html`<section>${children}</section>`;
 }
 
 function TodoList() {
@@ -25,21 +27,24 @@ function TodoList() {
 
     function addItem() {
         setItems([...items, newItem]);
+        setNewItem("");
     }
 
     function onchange(e: any) {
         setNewItem(e.target?.value);
     }
 
-    return createElement("div", null,
-        createElement(List, { type: "ul", items }),
-        createElement("input", { onchange, value: newItem }),
-        createElement("button", { onclick: addItem }, "Add")
-    );
+    return html`
+        <div>
+            <${List} type="ul" items=${items} />
+            <input onchange=${onchange} value=${newItem} />
+            <button onclick=${addItem}>Add</button>
+        </div>
+    `;
 }
 
-function List({ type, items }: { type: "ul" | "ol"; items: string[]; }) {
-    return items.length > 0 ? createElement(type, null,
-        ...items.map(item => createElement("li", null, item))
-    ) : createElement("p", null, "No items");
+function List({ type, items }: { type: string; items: string[]; }) {
+    return items.length > 0 
+    ? html`<${type}>${items.map(item => html`<li>${item}</li>`)}<//>`
+    : html`<p>No items</p>`;
 }
