@@ -4,10 +4,11 @@ export default self;
 type Arrayable<T> = T | T[];
 export type FunctionComponent = (props: any) => ReactorRenderable;
 export type ReactorRenderable = Arrayable<ReactorElement> | string | number | bigint | boolean | null | undefined;
+export type ReactorKey = string | number | bigint | null | undefined;
 // TODO: Add type for props
 export interface ReactorElement<T = string | Symbol | FunctionComponent> {
     type: T;
-    props: { key?: string | number | bigint | null, children?: ReactorElement[], [name: string]: any };
+    props: { key?: ReactorKey, children?: ReactorElement[], [name: string]: any };
     domRef?: Node;
     domParent?: ReactorElement<string>;
     symbol?: Symbol;
@@ -23,7 +24,7 @@ let renderingComponent: Symbol | null = null;
 const componentMap: Map<Symbol, FunctionComponentData> = new Map();
 const NODE_SYMBOL = Symbol("reactor.node");
 const FRAGMENT_SYMBOL = Symbol("reactor.fragment");
-export const Fragment = ({ children }: { children?: ReactorElement[] }) => wrapFragment(children);
+export const Fragment = ({ children, key }: { children?: ReactorElement[], key?: ReactorKey }) => wrapFragment(children, key);
 
 export function createRoot(container: HTMLElement | null) {
     if (!container) {
@@ -191,8 +192,8 @@ function wrapElements(value?: Arrayable<ReactorElement> | null): ReactorElement 
     return Array.isArray(value) ? wrapFragment(value) : value;
 }
 
-function wrapFragment(value?: Arrayable<ReactorElement> | null): ReactorElement<typeof FRAGMENT_SYMBOL> {
-    return { type: FRAGMENT_SYMBOL, props: { children: wrapArray(value) } };
+function wrapFragment(value: Arrayable<ReactorElement> | null | undefined, key?: ReactorKey): ReactorElement<typeof FRAGMENT_SYMBOL> {
+    return { type: FRAGMENT_SYMBOL, props: { children: wrapArray(value), key } };
 }
 
 function copyPropertiesToHtmlElement(element: ReactorElement<string>, domElement: HTMLElement) {
