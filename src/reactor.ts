@@ -3,7 +3,7 @@ export default self;
 
 type Arrayable<T> = T | T[];
 export type FunctionComponent = (props: any) => ReactorRenderable;
-export type ReactorRenderable = Arrayable<ReactorElement> | string | number | null | undefined;
+export type ReactorRenderable = Arrayable<ReactorElement> | string | number | bigint | boolean | null | undefined;
 // TODO: Add type for props
 export interface ReactorElement<T = string | Symbol | FunctionComponent> {
     type: T;
@@ -24,7 +24,11 @@ const componentMap: Map<Symbol, FunctionComponentData> = new Map();
 const NODE_SYMBOL = Symbol("reactor.node");
 const FRAGMENT_SYMBOL = Symbol("reactor.fragment");
 
-export function createRoot(container: HTMLElement) {
+export function createRoot(container: HTMLElement | null) {
+    if (!container) {
+        throw Error("Container passed to createRoot is null.");
+    }
+
     return { render: (root: ReactorElement) => render(container, root) };
 }
 
@@ -229,7 +233,7 @@ function nodeToElement(node: ReactorRenderable) {
         return node;
     }
 
-    return { type: NODE_SYMBOL, props: { value: node } };
+    return { type: NODE_SYMBOL, props: { value: node.toString() } };
 }
 
 function getRenderingComponent(): Symbol {

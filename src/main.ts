@@ -2,7 +2,7 @@ import Reactor, { useState, createElement } from "./reactor";
 import htm from "htm";
 
 const html = htm.bind(Reactor.createElement);
-Reactor.createRoot(document.getElementById("app")!).render(createElement(App));
+Reactor.createRoot(document.getElementById("app")).render(createElement(App));
 
 function App() {
     const [count, setCount] = useState(0);
@@ -30,6 +30,11 @@ function TodoList() {
         setNewItem("");
     }
 
+    function addItemAtStart() {
+        setItems([newItem, ...items]);
+        setNewItem("");
+    }
+
     function onchange(e: any) {
         setNewItem(e.target?.value);
     }
@@ -37,16 +42,25 @@ function TodoList() {
     return html`
         <div>
             <${List} type="ul" items=${items} />
-            <input onchange=${onchange} value=${newItem} />
-            <button onclick=${addItem}>Add</button>
+            <div style="display: flex; gap: 0.5rem;">
+                <input onchange=${onchange} value=${newItem} />
+                <button onclick=${addItem}>Add</button>
+                <button onclick=${addItemAtStart}>Add at start</button>
+            </div>
         </div>
     `;
 }
 
 function List({ type, items }: { type: string; items: string[]; }) {
-    if (items.length === 2) return null;
+    // if (items.length === 2) return null;
 
-    return items.length > 0 
-    ? html`<${type}>${items.map(item => html`<li>${item}</li>`)}<//>`
-    : html`<p>No items</p>`;
+    return items.length > 0
+        ? html`<${type}>${items.map(item => html`<li>${item}</li>`)}<//>`
+        : html`<p>No items</p>`;
+}
+
+function StatefulCounter() {
+    const [count, setCount] = useState(0);
+
+    return html`<p onclick=${() => setCount(count + 1)}>${count}</p>`;
 }
