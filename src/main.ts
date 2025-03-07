@@ -26,13 +26,13 @@ function TodoList() {
     const [newItem, setNewItem] = useState("");
 
     function addItem() {
-        setItems([...items, newItem]);
-        setNewItem("");
+        setItems([...items, crypto.randomUUID()]);
+        //setNewItem("");
     }
 
     function addItemAtStart() {
-        setItems([newItem, ...items]);
-        setNewItem("");
+        setItems([crypto.randomUUID(), ...items]);
+        //setNewItem("");
     }
 
     function onchange(e: any) {
@@ -51,11 +51,11 @@ function TodoList() {
     `;
 }
 
-function List({ type, items }: { type: string; items: string[]; }) {
+function List({ type, items }: { type: string, items: string[] }) {
     // if (items.length === 2) return null;
 
     return items.length > 0
-        ? html`<${type}>${items.map(item => html`<li>${item}</li>`)}<//>`
+        ? html`<${type}>${items.map(item => html`<${StatefulCounter} key=${item} />`)}<//>`
         : html`<p>No items</p>`;
 }
 

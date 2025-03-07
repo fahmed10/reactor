@@ -82,8 +82,25 @@ function detachElement(element: ReactorElement) {
     }
 }
 
-function zipArrays<T>(a: T[], b: T[]): [T, T][] {
-    return Array.from({ length: Math.max(a.length, b.length) }).map((_, i) => [a[i], b[i]]);
+function matchElements(old: ReactorElement[], current: ReactorElement[]): [ReactorElement?, ReactorElement?][] {
+    const unmatched = [...old];
+    const result: [ReactorElement?, ReactorElement?][] = [];
+    
+    current.forEach(c => {
+        if (c.props.key != null) {
+            const match = unmatched.findIndex(o => o.props.key === c.props.key);
+            if (match !== -1) {
+                result.push([unmatched.splice(match, 1)[0], c]);
+            } else {
+                result.push([undefined, c]);
+            }
+        } else {
+            result.push([unmatched.shift(), c]);
+        }
+    });
+
+    result.push(...unmatched.map(o => [o] as [ReactorElement]));
+    return result;
 }
 
 function getComponentCachedSize(element: ReactorElement): number {
@@ -154,15 +171,15 @@ function renderDiff(root: ReactorElement<string>, old?: ReactorElement | null, c
             current.domParent = old.domParent;
             const oldTree = wrapArray(componentMap.get(current.symbol!)!.cache);
             const currentTree = wrapArray(renderFunctionComponent(root, current));
-            zipArrays(oldTree, currentTree).forEach(([o, c]) => renderDiff(root, o, c));
+            matchElements(oldTree, currentTree).forEach(([o, c]) => renderDiff(root, o, c));
         } else if (isFragment(current)) {
-            zipArrays<ReactorElement>(old.props.children!, current.props.children!).forEach(([o, c]) => renderDiff(root, o, c));
+            matchElements(old.props.children!, current.props.children!).forEach(([o, c]) => renderDiff(root, o, c));
         } else {
             current.domRef = old.domRef!;
 
             if (current.props.children) {
                 copyPropertiesToHtmlElement(current as ReactorElement<string>, current.domRef as HTMLElement);
-                zipArrays<ReactorElement>(old.props.children!, current.props.children).forEach(([o, c]) => renderDiff(current as ReactorElement<string>, o, c));
+                matchElements(old.props.children!, current.props.children).forEach(([o, c]) => renderDiff(current as ReactorElement<string>, o, c));
             } else if (old.props.value !== current.props.value) {
                 current.domRef.nodeValue = current.props.value;
             }
