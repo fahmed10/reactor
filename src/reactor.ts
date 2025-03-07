@@ -234,6 +234,10 @@ function isDomElement(component: ReactorElement): component is ReactorElement<st
 }
 
 function nodeToElement(node: ReactorRenderable) {
+    if (typeof node === "boolean") {
+        return null;
+    }
+
     if (typeof node === "object" || node == null) {
         return node;
     }
