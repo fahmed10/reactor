@@ -44,6 +44,8 @@ function TodoList() {
 }
 
 function List({ type, items }: { type: string; items: string[]; }) {
+    if (items.length === 2) return null;
+
     return items.length > 0 
     ? html`<${type}>${items.map(item => html`<li>${item}</li>`)}<//>`
     : html`<p>No items</p>`;

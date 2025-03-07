@@ -3,12 +3,11 @@ export default self;
 
 type Arrayable<T> = T | T[];
 export type FunctionComponent = (props: any) => ReactorRenderable;
-export type ReactorRenderable = Arrayable<ReactorElement> | string | number;
-type ReactorDOMElement = ReactorElement<string | Symbol>;
+export type ReactorRenderable = Arrayable<ReactorElement> | string | number | null | undefined;
 // TODO: Add type for props
 export interface ReactorElement<T = string | Symbol | FunctionComponent> {
     type: T;
-    props: any;
+    props: { key?: string | number | bigint | null, children?: ReactorElement[], [name: string]: any };
     domRef?: Node;
     domParent?: ReactorElement<string>;
     symbol?: Symbol;
@@ -16,7 +15,7 @@ export interface ReactorElement<T = string | Symbol | FunctionComponent> {
 interface FunctionComponentData {
     instance: ReactorElement<FunctionComponent>;
     state: any[];
-    cache?: Arrayable<ReactorElement>;
+    cache?: Arrayable<ReactorElement> | null;
 }
 
 let currentStateIndex = -1;
@@ -62,12 +61,16 @@ export function useState<T>(defaultValue: T): [T, (value: T) => void] {
     }];
 }
 
+/*export function useEffect(effect: () => (() => void) | void) {
+
+}*/
+
 function detachElement(element: ReactorElement) {
     if (isFunctionComponent(element)) {
         const data = componentMap.get(element.symbol!)!.cache;
         wrapArray(data).forEach(e => detachElement(e));
     } else if (isFragment(element)) {
-        element.props.children.forEach((c: ReactorElement) => detachElement(c));
+        element.props.children!.forEach((c: ReactorElement) => detachElement(c));
     } else {
         element.domRef!.parentElement?.removeChild(element.domRef!);
     }
@@ -77,13 +80,60 @@ function zipArrays<T>(a: T[], b: T[]): [T, T][] {
     return Array.from({ length: Math.max(a.length, b.length) }).map((_, i) => [a[i], b[i]]);
 }
 
-function renderDiff(root: ReactorElement<string>, old?: ReactorElement, nov?: ReactorElement) {
+function getComponentCachedSize(element: ReactorElement): number {
+    if (isFunctionComponent(element)) {
+        return wrapArray(componentMap.get(element.symbol!)!.cache).map(c => getComponentCachedSize(c)).reduce((a, b) => a + b, 0);
+    } else if (isFragment(element)) {
+        return element.props.children!.map(c => getComponentCachedSize(c)).reduce((a, b) => a + b, 0);
+    }
+
+    return 1;
+}
+
+function containsComponentInCache(container: ReactorElement, element: ReactorElement): boolean {
+    if (container === element) {
+        return true;
+    }
+
+    if (isFunctionComponent(container)) {
+        return wrapArray(componentMap.get(container.symbol!)!.cache).some(c => containsComponentInCache(c, element));
+    } else if (isFragment(container) || isDomElement(container)) {
+        return container.props.children!.some(c => containsComponentInCache(c, element));
+    }
+
+    return false;
+}
+
+function insertElementAtIndex(parent: HTMLElement, child: Node, index: number) {
+    if (index > parent.childNodes.length) {
+        throw Error("Invalid index.");
+    } else if (index === parent.childNodes.length) {
+        parent.appendChild(child)
+    } else {
+        parent.insertBefore(child, parent.childNodes[index])
+    }
+}
+
+function insertElement(root: ReactorElement<string>, element: ReactorElement) {
+    const rootDom = root.domRef as HTMLElement;
+
+    if (rootDom.childNodes.length === 0) {
+        wrapArray(toHtmlNode(root, element)).forEach(e => rootDom.appendChild(e));
+        return;
+    }
+
+    const elementsBefore = root.props.children!.slice(0, root.props.children!.findIndex(c => containsComponentInCache(c, element)));
+    let index = elementsBefore.map(c => getComponentCachedSize(c)).reduce((a, b) => a + b, 0);
+    wrapArray(toHtmlNode(root, element)).forEach(e => insertElementAtIndex(rootDom, e, index++));
+}
+
+function renderDiff(root: ReactorElement<string>, old?: ReactorElement | null, nov?: ReactorElement | null) {
     if (old == null && nov == null) {
         return;
     }
 
     if (old == null) {
-        wrapArray(toHtmlNode(root, nov!)).forEach(e => (root.domRef as HTMLElement).appendChild(e));
+        insertElement(root, nov!);
         return;
     }
 
@@ -100,13 +150,13 @@ function renderDiff(root: ReactorElement<string>, old?: ReactorElement, nov?: Re
             const newTree = wrapArray(renderFunctionComponent(root, nov));
             zipArrays(oldTree, newTree).forEach(([o, n]) => renderDiff(root, o, n));
         } else if (isFragment(nov)) {
-            zipArrays<ReactorElement>(old.props.children, nov.props.children).forEach(([o, n]) => renderDiff(root, o, n));
+            zipArrays<ReactorElement>(old.props.children!, nov.props.children!).forEach(([o, n]) => renderDiff(root, o, n));
         } else {
             nov.domRef = old.domRef!;
 
             if (nov.props.children) {
                 copyPropertiesToHtmlElement(nov as ReactorElement<string>, nov.domRef as HTMLElement);
-                zipArrays<ReactorElement>(old.props.children, nov.props.children).forEach(([o, n]) => renderDiff(nov as ReactorElement<string>, o, n));
+                zipArrays<ReactorElement>(old.props.children!, nov.props.children).forEach(([o, n]) => renderDiff(nov as ReactorElement<string>, o, n));
             } else if (old.props.value !== nov.props.value) {
                 nov.domRef.nodeValue = nov.props.value;
             }
@@ -121,10 +171,10 @@ function areElementsSame(a: ReactorElement, b: ReactorElement): boolean {
 }
 
 function render(container: HTMLElement, root: ReactorElement) {
-    renderDiff({ type: container.tagName, props: {}, domRef: container }, undefined, root);
+    renderDiff({ type: container.tagName, props: { children: [] }, domRef: container }, null, root);
 }
 
-function wrapArray<T>(value?: Arrayable<T>): T[] {
+function wrapArray<T>(value?: Arrayable<T> | null): T[] {
     if (value == null) {
         return [];
     }
@@ -132,7 +182,7 @@ function wrapArray<T>(value?: Arrayable<T>): T[] {
     return Array.isArray(value) ? value : [value];
 }
 
-function wrapFragment(value?: Arrayable<ReactorElement>): ReactorElement<typeof FRAGMENT_SYMBOL> {
+function wrapFragment(value?: Arrayable<ReactorElement> | null): ReactorElement<typeof FRAGMENT_SYMBOL> {
     return { type: FRAGMENT_SYMBOL, props: { children: wrapArray(value) } };
 }
 
@@ -145,18 +195,16 @@ function toHtmlNode(root: ReactorElement<string>, element: ReactorElement): Arra
         return wrapArray(renderFunctionComponent(root, element)).flatMap(e => toHtmlNode(root, e));
     }
 
-    if (typeof element.type === "string") {
+    if (isDomElement(element)) {
         const domElement = document.createElement(element.type);
-        copyPropertiesToHtmlElement(element as ReactorElement<string>, domElement);
+        copyPropertiesToHtmlElement(element, domElement);
         element.domRef = domElement;
-        const children: ReactorDOMElement[] = element.props.children;
-        domElement.replaceChildren(...children.flatMap(c => toHtmlNode(element as ReactorElement<string>, c)));
+        domElement.replaceChildren(...element.props.children!.flatMap(c => toHtmlNode(element, c)));
         return domElement;
     }
 
     if (isFragment(element)) {
-        const children: ReactorDOMElement[] = element.props.children;
-        return children.flatMap(c => toHtmlNode(root, c));
+        return element.props.children!.flatMap(c => toHtmlNode(root, c));
     }
 
     const domNode = document.createTextNode(element.props.value);
@@ -172,8 +220,12 @@ function isFragment(component: ReactorElement): component is ReactorElement<type
     return component.type === FRAGMENT_SYMBOL;
 }
 
+function isDomElement(component: ReactorElement): component is ReactorElement<string> {
+    return typeof component.type === "string";
+}
+
 function nodeToElement(node: ReactorRenderable) {
-    if (typeof node === "object") {
+    if (typeof node === "object" || node == null) {
         return node;
     }
 
@@ -202,5 +254,5 @@ function renderFunctionComponent(domParent: ReactorElement<string>, component: R
     const element = nodeToElement(component.type(component.props));
     renderingComponent = null;
     componentData.cache = element;
-    return element;
+    return element ?? [];
 }
