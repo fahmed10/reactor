@@ -133,42 +133,42 @@ function insertElement(root: ReactorElement<string>, element: ReactorElement) {
     wrapArray(toHtmlNode(root, element)).forEach(e => insertElementAtIndex(rootDom, e, index++));
 }
 
-function renderDiff(root: ReactorElement<string>, old?: ReactorElement | null, nov?: ReactorElement | null) {
-    if (old == null && nov == null) {
+function renderDiff(root: ReactorElement<string>, old?: ReactorElement | null, current?: ReactorElement | null) {
+    if (old == null && current == null) {
         return;
     }
 
     if (old == null) {
-        insertElement(root, nov!);
+        insertElement(root, current!);
         return;
     }
 
-    if (nov == null) {
+    if (current == null) {
         detachElement(old);
         return;
     }
 
-    if (areElementsSame(old, nov)) {
-        if (isFunctionComponent(nov)) {
-            nov.symbol = old.symbol;
-            nov.domParent = old.domParent;
-            const oldTree = wrapArray(componentMap.get(nov.symbol!)!.cache);
-            const newTree = wrapArray(renderFunctionComponent(root, nov));
-            zipArrays(oldTree, newTree).forEach(([o, n]) => renderDiff(root, o, n));
-        } else if (isFragment(nov)) {
-            zipArrays<ReactorElement>(old.props.children!, nov.props.children!).forEach(([o, n]) => renderDiff(root, o, n));
+    if (areElementsSame(old, current)) {
+        if (isFunctionComponent(current)) {
+            current.symbol = old.symbol;
+            current.domParent = old.domParent;
+            const oldTree = wrapArray(componentMap.get(current.symbol!)!.cache);
+            const currentTree = wrapArray(renderFunctionComponent(root, current));
+            zipArrays(oldTree, currentTree).forEach(([o, c]) => renderDiff(root, o, c));
+        } else if (isFragment(current)) {
+            zipArrays<ReactorElement>(old.props.children!, current.props.children!).forEach(([o, c]) => renderDiff(root, o, c));
         } else {
-            nov.domRef = old.domRef!;
+            current.domRef = old.domRef!;
 
-            if (nov.props.children) {
-                copyPropertiesToHtmlElement(nov as ReactorElement<string>, nov.domRef as HTMLElement);
-                zipArrays<ReactorElement>(old.props.children!, nov.props.children).forEach(([o, n]) => renderDiff(nov as ReactorElement<string>, o, n));
-            } else if (old.props.value !== nov.props.value) {
-                nov.domRef.nodeValue = nov.props.value;
+            if (current.props.children) {
+                copyPropertiesToHtmlElement(current as ReactorElement<string>, current.domRef as HTMLElement);
+                zipArrays<ReactorElement>(old.props.children!, current.props.children).forEach(([o, c]) => renderDiff(current as ReactorElement<string>, o, c));
+            } else if (old.props.value !== current.props.value) {
+                current.domRef.nodeValue = current.props.value;
             }
         }
     } else {
-        (old.domRef as HTMLElement).replaceWith(...wrapArray(toHtmlNode(root, nov)));
+        (old.domRef as HTMLElement).replaceWith(...wrapArray(toHtmlNode(root, current)));
     }
 }
 
