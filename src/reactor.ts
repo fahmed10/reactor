@@ -23,6 +23,7 @@ let renderingComponent: Symbol | null = null;
 const componentMap: Map<Symbol, FunctionComponentData> = new Map();
 const NODE_SYMBOL = Symbol("reactor.node");
 const FRAGMENT_SYMBOL = Symbol("reactor.fragment");
+export const Fragment = ({ children }: { children?: ReactorElement[] }) => wrapFragment(children);
 
 export function createRoot(container: HTMLElement | null) {
     if (!container) {
@@ -59,15 +60,15 @@ export function useState<T>(defaultValue: T): [T, (value: T) => void] {
         }
 
         component.state[capturedStateIndex] = value;
-        const cache = wrapFragment(component.cache);
-        const result = wrapFragment(renderFunctionComponent(component.instance.domParent!, component.instance));
+        const cache = wrapElements(component.cache);
+        const result = wrapElements(renderFunctionComponent(component.instance.domParent!, component.instance));
         renderDiff(component.instance.domParent!, cache, result);
     }];
 }
 
-/*export function useEffect(effect: () => (() => void) | void) {
-
-}*/
+export function useEffect(effect: () => void | (() => void), dependencies?: any[]) {
+    return [effect, dependencies];
+}
 
 function detachElement(element: ReactorElement) {
     if (isFunctionComponent(element)) {
@@ -184,6 +185,10 @@ function wrapArray<T>(value?: Arrayable<T> | null): T[] {
     }
 
     return Array.isArray(value) ? value : [value];
+}
+
+function wrapElements(value?: Arrayable<ReactorElement> | null): ReactorElement | null | undefined {
+    return Array.isArray(value) ? wrapFragment(value) : value;
 }
 
 function wrapFragment(value?: Arrayable<ReactorElement> | null): ReactorElement<typeof FRAGMENT_SYMBOL> {

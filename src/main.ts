@@ -59,7 +59,7 @@ function List({ type, items }: { type: string; items: string[]; }) {
         : html`<p>No items</p>`;
 }
 
-function StatefulCounter() {
+export function StatefulCounter() {
     const [count, setCount] = useState(0);
 
     return html`<p onclick=${() => setCount(count + 1)}>${count}</p>`;
