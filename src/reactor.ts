@@ -38,6 +38,8 @@ export function createRoot(container: HTMLElement | null) {
 export function createElement(type: string | FunctionComponent, props: any = null, ...children: ReactorRenderable[]): ReactorElement {
     if (typeof type === "string") {
         type = type.toUpperCase();
+    } else if (typeof type !== "function") {
+        throw Error(`Invalid component type passed to createElement. Component types must be a string or function, but got '${(type as any).toString()}' instead.`);
     }
 
     while (children.length === 1 && Array.isArray(children[0])) {

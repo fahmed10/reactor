@@ -1,4 +1,4 @@
-import Reactor, { useState, createElement, Fragment } from "./reactor";
+import Reactor, { useState, createElement } from "./reactor";
 import htm from "htm";
 
 const html = htm.bind(Reactor.createElement);
@@ -17,8 +17,7 @@ function App() {
     `;
 }
 
-function Container({ children, key }: { children: Reactor.ReactorRenderable }) {
-    console.log(key);
+function Container({ children }: { children: Reactor.ReactorRenderable }) {
     return html`<section>${children}</section>`;
 }
 
