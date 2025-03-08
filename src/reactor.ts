@@ -1,4 +1,4 @@
-import * as self from "./reactor.js";
+import * as self from "./reactor";
 export default self;
 
 type Arrayable<T> = T | T[];
@@ -85,7 +85,7 @@ function detachElement(element: ReactorElement) {
 function matchElements(old: ReactorElement[], current: ReactorElement[]): [ReactorElement?, ReactorElement?][] {
     const unmatched = [...old];
     const result: [ReactorElement?, ReactorElement?][] = [];
-    
+
     current.forEach(c => {
         if (c.props.key != null) {
             const match = unmatched.findIndex(o => o.props.key === c.props.key);
@@ -185,7 +185,8 @@ function renderDiff(root: ReactorElement<string>, old?: ReactorElement | null, c
             }
         }
     } else {
-        (old.domRef as HTMLElement).replaceWith(...wrapArray(toHtmlNode(root, current)));
+        detachElement(old);
+        insertElement(root, current);
     }
 }
 
@@ -287,3 +288,5 @@ function renderFunctionComponent(domParent: ReactorElement<string>, component: R
     componentData.cache = element;
     return element ?? [];
 }
+
+if (process.env.NODE_ENV === "test") { [matchElements, getComponentCachedSize, containsComponentInCache, insertElement, insertElementAtIndex, areElementsSame, wrapArray, wrapElements, wrapFragment].forEach((fn: Function) => module.exports[fn.name] = fn); }

@@ -1,4 +1,4 @@
-import Reactor, { useState, createElement } from "./reactor";
+import Reactor, { useState, createElement, Fragment } from "./reactor";
 import htm from "htm";
 
 const html = htm.bind(Reactor.createElement);
@@ -27,12 +27,12 @@ function TodoList() {
 
     function addItem() {
         setItems([...items, crypto.randomUUID()]);
-        //setNewItem("");
+        setNewItem("");
     }
 
     function addItemAtStart() {
         setItems([crypto.randomUUID(), ...items]);
-        //setNewItem("");
+        setNewItem("");
     }
 
     function onchange(e: any) {
@@ -55,7 +55,10 @@ function List({ type, items }: { type: string, items: string[] }) {
     // if (items.length === 2) return null;
 
     return items.length > 0
-        ? html`<${type}>${items.map(item => html`<${StatefulCounter} key=${item} />`)}<//>`
+        ? html`<${type}>${items.map(item => html`<${Fragment}>
+        <${StatefulCounter} key=${item} />
+        <p>${item}</p>
+        </${Fragment}>`)}<//>`
         : html`<p>No items</p>`;
 }
 
