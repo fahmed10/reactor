@@ -8,7 +8,8 @@ export type ReactorKey = string | number | bigint | null | undefined;
 // TODO: Add type for props
 export interface ReactorElement<T = string | Symbol | FunctionComponent> {
     type: T;
-    props: { key?: ReactorKey, children?: ReactorElement[], [name: string]: any };
+    props: { children?: ReactorElement[], internal?: boolean, value?: any, [name: string]: any };
+    key?: ReactorKey;
     domRef?: Node;
     domParent?: ReactorElement<string>;
     symbol?: Symbol;
@@ -24,7 +25,7 @@ let renderingComponent: Symbol | null = null;
 const componentMap: Map<Symbol, FunctionComponentData> = new Map();
 const NODE_SYMBOL = Symbol("reactor.node");
 const FRAGMENT_SYMBOL = Symbol("reactor.fragment");
-export const Fragment = ({ children, key }: { children?: ReactorElement[], key?: ReactorKey }) => wrapFragment(children, key);
+export const Fragment = ({ children, key }: { children?: ReactorElement[], key?: ReactorKey }) => wrapFragment(children, key, false);
 
 export function createRoot(container: HTMLElement | null) {
     if (!container) {
@@ -44,9 +45,11 @@ export function createElement(type: string | FunctionComponent, props: any = nul
     }
 
     props ??= {};
+    const key = props.key;
+    delete props.key;
     props.children = children.map(c => nodeToElement(c));
 
-    return { type, props };
+    return { type, props, key };
 }
 
 export function useState<T>(defaultValue: T): [T, (value: T) => void] {
@@ -82,13 +85,36 @@ function detachElement(element: ReactorElement) {
     }
 }
 
+function getComponentName(element: ReactorElement): string {
+    if (isFunctionComponent(element)) {
+        return `<${element.type.name}>`;
+    } else if (isFragment(element)) {
+        return "<Fragment>";
+    } else if (isDomElement(element)) {
+        return `<${element.type}>`;
+    }
+
+    return "#text";
+}
+
 function matchElements(old: ReactorElement[], current: ReactorElement[]): [ReactorElement?, ReactorElement?][] {
     const unmatched = [...old];
     const result: [ReactorElement?, ReactorElement?][] = [];
 
+    const keys = current.filter(c => c.key != null).length;
+    if (keys != 0 && keys != current.length) {
+        console.error("All elements in a list should have a unique key prop assigned to them. Assigning keys to only some elements in a list can lead to unexpected behaviour.");
+    }
+
+    const keysSeen: ReactorKey[] = [];
     current.forEach(c => {
-        if (c.props.key != null) {
-            const match = unmatched.findIndex(o => o.props.key === c.props.key);
+        if (c.key != null) {
+            if (keysSeen.includes(c.key)) {
+                console.error(`All elements in a list should have a unique key prop assigned to them. Found duplicate key '${c.key}' on ${getComponentName(c)} element.`);
+            }
+            keysSeen.push(c.key);
+
+            const match = unmatched.findIndex(o => o.key === c.key);
             if (match !== -1) {
                 result.push([unmatched.splice(match, 1)[0], c]);
             } else {
@@ -173,6 +199,10 @@ function renderDiff(root: ReactorElement<string>, old?: ReactorElement | null, c
             const currentTree = wrapArray(renderFunctionComponent(root, current));
             matchElements(oldTree, currentTree).forEach(([o, c]) => renderDiff(root, o, c));
         } else if (isFragment(current)) {
+            if (!current.props.internal && current.props.children!.some(c => c.key == null)) {
+                console.error("All elements in a list should have a unique key prop assigned to them. Not assigning a key prop can lead to unexpected behaviour and degraded performance.");
+            }
+
             matchElements(old.props.children!, current.props.children!).forEach(([o, c]) => renderDiff(root, o, c));
         } else {
             current.domRef = old.domRef!;
@@ -210,8 +240,8 @@ function wrapElements(value?: Arrayable<ReactorElement> | null): ReactorElement 
     return Array.isArray(value) ? wrapFragment(value) : value;
 }
 
-function wrapFragment(value: Arrayable<ReactorElement> | null | undefined, key?: ReactorKey): ReactorElement<typeof FRAGMENT_SYMBOL> {
-    return { type: FRAGMENT_SYMBOL, props: { children: wrapArray(value), key } };
+function wrapFragment(value: Arrayable<ReactorElement> | null | undefined, key?: ReactorKey, internal: boolean = true): ReactorElement<typeof FRAGMENT_SYMBOL> {
+    return { type: FRAGMENT_SYMBOL, props: { children: wrapArray(value), internal }, key };
 }
 
 function copyPropertiesToHtmlElement(element: ReactorElement<string>, domElement: HTMLElement) {

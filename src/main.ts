@@ -17,7 +17,8 @@ function App() {
     `;
 }
 
-function Container({ children }: { children: Reactor.ReactorRenderable }) {
+function Container({ children, key }: { children: Reactor.ReactorRenderable }) {
+    console.log(key);
     return html`<section>${children}</section>`;
 }
 
@@ -42,11 +43,13 @@ function TodoList() {
     return html`
         <div>
             <${List} type="ul" items=${items} />
-            <div style="display: flex; gap: 0.5rem;">
-                <input onchange=${onchange} value=${newItem} />
-                <button onclick=${addItem}>Add</button>
-                <button onclick=${addItemAtStart}>Add at start</button>
-            </div>
+            
+                <div style="display: flex; gap: 0.5rem;">
+                    <input onchange=${onchange} value=${newItem} />
+                    <button onclick=${addItem}>Add</button>
+                    <button onclick=${addItemAtStart}>Add at start</button>
+                </div>
+            
         </div>
     `;
 }
@@ -55,10 +58,10 @@ function List({ type, items }: { type: string, items: string[] }) {
     // if (items.length === 2) return null;
 
     return items.length > 0
-        ? html`<${type}>${items.map(item => html`<${Fragment}>
-        <${StatefulCounter} key=${item} />
+        ? html`<${type}>${items.map(item => html`<${Container} key=${item}>
+        <${StatefulCounter} />
         <p>${item}</p>
-        </${Fragment}>`)}<//>`
+        <//>`)}<//>`
         : html`<p>No items</p>`;
 }
 
