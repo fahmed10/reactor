@@ -18,9 +18,11 @@ interface FunctionComponentData {
     instance: ReactorElement<FunctionComponent>;
     state: any[];
     cache?: Arrayable<ReactorElement> | null;
+    hooksCalled?: number;
 }
 
 let currentStateIndex = -1;
+let hooksCalled = 0;
 let componentStateChanged = false;
 let componentRerenders = 0;
 let renderingComponent: Symbol | null = null;
@@ -57,7 +59,8 @@ export function createElement(type: string | FunctionComponent, props: any = nul
     return { type, props, key };
 }
 
-export function useState<T>(defaultValue: T): [T, (value: T) => void] {
+export function useState<T>(defaultValue?: T): [T, (value: T) => void] {
+    hooksCalled++;
     currentStateIndex++;
     // Capture current state index to use in state setter closure.
     const capturedStateIndex = currentStateIndex;
@@ -88,6 +91,7 @@ export function useState<T>(defaultValue: T): [T, (value: T) => void] {
 }
 
 export function useEffect(effect: () => void | (() => void), dependencies?: any[]) {
+    hooksCalled++;
     return [effect, dependencies];
 }
 
@@ -333,9 +337,16 @@ function renderFunctionComponent(domParent: ReactorElement<string>, component: R
     let element;
     do {
         componentStateChanged = false;
+        hooksCalled = 0;
         currentStateIndex = -1;
         element = nodeToElement(component.type(component.props));
         componentRerenders++;
+
+        if (componentData.hooksCalled !== undefined && hooksCalled != componentData.hooksCalled) {
+            console.error(`The number of hooks called by component ${getComponentName(component)} has changed between renders.`);
+        }
+
+        componentData.hooksCalled = hooksCalled;
 
         if (componentRerenders > MAX_COMPONENT_RERENDERS) {
             console.error("You are calling a state setter function on every render, causing an infinite loop. Setting state while rendering should only be done conditionally.");
