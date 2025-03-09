@@ -21,8 +21,11 @@ interface FunctionComponentData {
 }
 
 let currentStateIndex = -1;
+let componentStateChanged = false;
+let componentRerenders = 0;
 let renderingComponent: Symbol | null = null;
 const componentMap: Map<Symbol, FunctionComponentData> = new Map();
+const MAX_COMPONENT_RERENDERS = 10;
 const NODE_SYMBOL = Symbol("reactor.node");
 const FRAGMENT_SYMBOL = Symbol("reactor.fragment");
 export const Fragment = ({ children, key }: { children?: ReactorElement[], key?: ReactorKey }) => wrapFragment(children, key, false);
@@ -56,6 +59,7 @@ export function createElement(type: string | FunctionComponent, props: any = nul
 
 export function useState<T>(defaultValue: T): [T, (value: T) => void] {
     currentStateIndex++;
+    // Capture current state index to use in state setter closure.
     const capturedStateIndex = currentStateIndex;
     const component = componentMap.get(getRenderingComponent())!;
     component.state[currentStateIndex] ??= defaultValue;
@@ -66,6 +70,17 @@ export function useState<T>(defaultValue: T): [T, (value: T) => void] {
         }
 
         component.state[capturedStateIndex] = value;
+
+        if (renderingComponent) {
+            if (component.instance.symbol !== renderingComponent) {
+                console.error("While rendering, state setter functions can only be called from the component they belong to.");
+                return;
+            }
+
+            componentStateChanged = true;
+            return;
+        }
+
         const cache = wrapElements(component.cache);
         const result = wrapElements(renderFunctionComponent(component.instance.domParent!, component.instance));
         renderDiff(component.instance.domParent!, cache, result);
@@ -314,8 +329,20 @@ function renderFunctionComponent(domParent: ReactorElement<string>, component: R
     }
     const componentData = componentMap.get(renderingComponent)!;
 
-    currentStateIndex = -1;
-    const element = nodeToElement(component.type(component.props));
+    componentRerenders = 0;
+    let element;
+    do {
+        componentStateChanged = false;
+        currentStateIndex = -1;
+        element = nodeToElement(component.type(component.props));
+        componentRerenders++;
+
+        if (componentRerenders > MAX_COMPONENT_RERENDERS) {
+            console.error("You are calling a state setter function on every render, causing an infinite loop. Setting state while rendering should only be done conditionally.");
+            break;
+        }
+    } while (componentStateChanged);
+
     renderingComponent = null;
     componentData.cache = element;
     return element ?? [];

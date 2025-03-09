@@ -62,10 +62,9 @@ function List({ type, items }: { type: string, items: string[] }) {
 export function StatefulCounter() {
     const [count, setCount] = useState(0);
 
-    //console.log(count);
-    if (count === 3) {
-        //setCount(0);
+    if (count === 5) {
+        setCount(0);
     }
 
-    return html`<p onclick=${() => setCount(count + 1)}>${count}</p>`;
+    return html`<p style="user-select: none;" onclick=${() => setCount(count + 1)}>${count}</p>`;
 }
