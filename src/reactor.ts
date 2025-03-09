@@ -32,7 +32,7 @@ export function createRoot(container: HTMLElement | null) {
         throw Error("Container passed to createRoot is null.");
     }
 
-    return { render: (root: ReactorElement) => render(container, root) };
+    return { render: (root: Arrayable<ReactorElement>) => render(container, root) };
 }
 
 export function createElement(type: string | FunctionComponent, props: any = null, ...children: ReactorRenderable[]): ReactorElement {
@@ -226,8 +226,8 @@ function areElementsSame(a: ReactorElement, b: ReactorElement): boolean {
     return a.type === b.type;
 }
 
-function render(container: HTMLElement, root: ReactorElement) {
-    renderDiff({ type: container.tagName, props: { children: [] }, domRef: container }, null, root);
+function render(container: HTMLElement, root: Arrayable<ReactorElement>) {
+    renderDiff({ type: container.tagName, props: { children: [] }, domRef: container }, null, wrapElements(root));
 }
 
 function wrapArray<T>(value?: Arrayable<T> | null): T[] {
