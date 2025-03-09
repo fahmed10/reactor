@@ -61,7 +61,7 @@ export function useState<T>(defaultValue: T): [T, (value: T) => void] {
     component.state[currentStateIndex] ??= defaultValue;
 
     return [component.state[currentStateIndex], (value: T) => {
-        if (component.state[capturedStateIndex] === value) {
+        if (Object.is(component.state[capturedStateIndex], value)) {
             return;
         }
 
