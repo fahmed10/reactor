@@ -95,6 +95,10 @@ export function useEffect(effect: () => void | (() => void), dependencies?: any[
     return [effect, dependencies];
 }
 
+function render(container: HTMLElement, root: Arrayable<ReactorElement>) {
+    renderDiff({ type: container.tagName, props: { children: null! }, domRef: container }, null, wrapElements(root));
+}
+
 function detachElement(element: ReactorElement) {
     if (isFunctionComponent(element)) {
         const data = componentMap.get(element.symbol!)!.cache;
@@ -192,7 +196,9 @@ function insertElement(root: ReactorElement<string>, element: ReactorElement) {
         return;
     }
 
-    const elementsBefore = root.props.children!.slice(0, root.props.children!.findIndex(c => containsComponentInCache(c, element)));
+
+    const children = root.props.children ?? wrapArray([...componentMap][0]?.[1]?.cache);
+    const elementsBefore = children.slice(0, children.findIndex(c => containsComponentInCache(c, element)));
     let index = elementsBefore.map(c => getComponentCachedSize(c)).reduce((a, b) => a + b, 0);
     wrapArray(toHtmlNode(root, element)).forEach(e => insertElementAtIndex(rootDom, e, index++));
 }
@@ -245,15 +251,8 @@ function areElementsSame(a: ReactorElement, b: ReactorElement): boolean {
     return a.type === b.type;
 }
 
-function render(container: HTMLElement, root: Arrayable<ReactorElement>) {
-    renderDiff({ type: container.tagName, props: { children: [] }, domRef: container }, null, wrapElements(root));
-}
-
 function wrapArray<T>(value?: Arrayable<T> | null): T[] {
-    if (value == null) {
-        return [];
-    }
-
+    value ??= [];
     return Array.isArray(value) ? value : [value];
 }
 
