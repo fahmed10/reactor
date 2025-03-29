@@ -2,7 +2,7 @@ import Reactor, { useState } from "./reactor";
 import htm from "htm";
 
 const html = htm.bind(Reactor.createElement);
-Reactor.createRoot(document.getElementById("app")).render(html`<${Container}><${App} /><//>`);
+Reactor.createRoot(document.getElementById("app")!).render(html`<${Container}><${App} /><//>`);
 
 function App() {
     const [count, setCount] = useState(0);

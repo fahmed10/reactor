@@ -1,7 +1,7 @@
 import * as self from "./reactor";
 export default self;
 
-type Arrayable<T> = T | T[];
+export type Arrayable<T> = T | T[];
 export type FunctionComponent = (props: any) => ReactorRenderable;
 export type ReactorRenderable = Arrayable<ReactorElement> | string | number | bigint | boolean | null | undefined;
 export type ReactorKey = string | number | bigint | null | undefined;
@@ -32,7 +32,7 @@ const NODE_SYMBOL = Symbol("reactor.node");
 const FRAGMENT_SYMBOL = Symbol("reactor.fragment");
 export const Fragment = ({ children, key }: { children?: ReactorElement[], key?: ReactorKey }) => wrapFragment(children, key, false);
 
-export function createRoot(container: HTMLElement | null) {
+export function createRoot(container: HTMLElement) {
     if (!container) {
         throw Error("Container passed to createRoot is null.");
     }
