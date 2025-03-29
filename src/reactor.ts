@@ -357,5 +357,3 @@ function renderFunctionComponent(domParent: ReactorElement<string>, component: R
     componentData.cache = element;
     return element ?? [];
 }
-
-if (process.env.NODE_ENV === "test") { [matchElements, getComponentCachedSize, containsComponentInCache, insertElement, insertElementAtIndex, areElementsSame, wrapArray, wrapElements, wrapFragment].forEach((fn: Function) => module.exports[fn.name] = fn); }
